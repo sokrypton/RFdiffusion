@@ -307,15 +307,23 @@ class Sampler:
         ####################################
 
         if self.diffuser_conf.partial_T:
-            assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
-                    each residue implied by the contig string for partial diffusion.  length of \
-                    input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
-            assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
-                    be no offset between the index of a residue in the input and the index of the \
-                    residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
-            # Partially diffusing from a known structure
-            xyz_mapped=xyz_27
-            atom_mask_mapped = mask_27
+            if self.symmetry is not None:
+                L = L_mapped // self.symmetry.order
+                xyz_mapped = torch.full((L_mapped,27,3),np.nan)
+                atom_mask_mapped = torch.full((L_mapped, 27), False)
+                xyz_mapped[:L] = xyz_27[:L]
+                atom_mask_mapped[:L] = mask_27[:L]
+
+            else:
+                assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
+                        each residue implied by the contig string for partial diffusion.  length of \
+                        input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
+                assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
+                        be no offset between the index of a residue in the input and the index of the \
+                        residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
+                # Partially diffusing from a known structure
+                xyz_mapped=xyz_27
+                atom_mask_mapped = mask_27
         else:
             # Fully diffusing from points initialised at the origin
             # adjust size of input xt according to residue map
