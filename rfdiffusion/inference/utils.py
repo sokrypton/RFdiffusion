@@ -536,16 +536,11 @@ def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
     # indices of residues observed in the structure
     res, pdb_idx = [],[]
     for l in lines:
-        if l[:4] == "ATOM" and l[12:16].strip() == "CA":
-            res.append((l[22:26], l[17:20]))
-            # chain letter, res num
-            pdb_idx.append((l[21:22].strip(), int(l[22:26].strip())))
+      if l[:4] == "ATOM" and l[12:16].strip() == "CA":
+        res.append((l[22:26], l[17:20]))
+        # chain letter, res num
+        pdb_idx.append((l[21:22].strip(), int(l[22:26].strip())))
     seq = [util.aa2num[r[1]] if r[1] in util.aa2num.keys() else 20 for r in res]
-    pdb_idx = [
-        (l[21:22].strip(), int(l[22:26].strip()))
-        for l in lines
-        if l[:4] == "ATOM" and l[12:16].strip() == "CA"
-    ]  # chain letter, res num
 
     # 4 BB + up to 10 SC atoms
     xyz = np.full((len(res), 14, 3), np.nan, dtype=np.float32)
@@ -559,16 +554,16 @@ def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
             l[17:20],
         )
         if (chain,resNo) in pdb_idx:
-            idx = pdb_idx.index((chain, resNo))
-            # for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]]):
-            for i_atm, tgtatm in enumerate(
-                util.aa2long[util.aa2num[aa]][:14]
-                ):
-                if (
-                    tgtatm is not None and tgtatm.strip() == atom.strip()
-                    ):  # ignore whitespace
-                    xyz[idx, i_atm, :] = [float(l[30:38]), float(l[38:46]), float(l[46:54])]
-                    break
+          idx = pdb_idx.index((chain, resNo))
+          # for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]]):
+          for i_atm, tgtatm in enumerate(
+              util.aa2long[util.aa2num[aa]][:14]
+          ):  # Nate's proposed change
+              if (
+                  tgtatm is not None and tgtatm.strip() == atom.strip()
+              ):  # ignore whitespace
+                  xyz[idx, i_atm, :] = [float(l[30:38]), float(l[38:46]), float(l[46:54])]
+                  break
 
     # save atom mask
     mask = np.logical_not(np.isnan(xyz[..., 0]))
@@ -663,9 +658,13 @@ def get_idx0_hotspots(mappings, ppi_conf, binderlen):
             ), "Hotspot residues need to be provided in pdb-indexed form. E.g. A100,A103"
             hotspots = [(i[0], int(i[1:])) for i in ppi_conf.hotspot_res]
             hotspot_idx = []
-            for i, res in enumerate(mappings["receptor_con_ref_pdb_idx"]):
+            if "receptor_con_ref_pdb_idx" in mappings:
+              (idx,idx0) = (mappings["receptor_con_ref_pdb_idx"],mappings["receptor_con_hal_idx0"])
+            else:
+              (idx,idx0) = (mappings["con_ref_pdb_idx"],mappings["con_hal_idx0"])
+            for i, res in enumerate(idx):
                 if res in hotspots:
-                    hotspot_idx.append(mappings["receptor_con_hal_idx0"][i])
+                    hotspot_idx.append(idx0[i])
     return hotspot_idx
 
 

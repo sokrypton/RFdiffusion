@@ -317,15 +317,23 @@ class Sampler:
         ####################################
 
         if self.diffuser_conf.partial_T:
-            assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
-                    each residue implied by the contig string for partial diffusion.  length of \
-                    input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
-            assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
-                    be no offset between the index of a residue in the input and the index of the \
-                    residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
-            # Partially diffusing from a known structure
-            xyz_mapped=xyz_27
-            atom_mask_mapped = mask_27
+            if self.symmetry is not None:
+                L = L_mapped // self.symmetry.order
+                xyz_mapped = torch.full((L_mapped,27,3),np.nan)
+                atom_mask_mapped = torch.full((L_mapped, 27), False)
+                xyz_mapped[:L] = xyz_27[:L]
+                atom_mask_mapped[:L] = mask_27[:L]
+
+            else:
+                assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
+                        each residue implied by the contig string for partial diffusion.  length of \
+                        input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
+                assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
+                        be no offset between the index of a residue in the input and the index of the \
+                        residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
+                # Partially diffusing from a known structure
+                xyz_mapped=xyz_27
+                atom_mask_mapped = mask_27
         else:
             # Fully diffusing from points initialised at the origin
             # adjust size of input xt according to residue map
@@ -334,7 +342,7 @@ class Sampler:
             xyz_motif_prealign = xyz_mapped.clone()
             motif_prealign_com = xyz_motif_prealign[0,0,:,1].mean(dim=0)
             self.motif_com = xyz_27[contig_map.ref_idx0,1].mean(dim=0)
-            xyz_mapped = get_init_xyz(xyz_mapped).squeeze()
+            xyz_mapped = get_init_xyz(xyz_mapped, center=self.symmetry is None).squeeze()
             # adjust the size of the input atom map
             atom_mask_mapped = torch.full((L_mapped, 27), False)
             atom_mask_mapped[contig_map.hal_idx0] = mask_27[contig_map.ref_idx0]
@@ -361,6 +369,11 @@ class Sampler:
         seq_t[~self.mask_seq.squeeze()] = 21
         seq_t    = torch.nn.functional.one_hot(seq_t, num_classes=22).float() # [L,22]
         seq_orig = torch.nn.functional.one_hot(seq_orig, num_classes=22).float() # [L,22]
+
+        ############################################################################
+        if self.symmetry is not None:
+            xyz_mapped, seq_t = self.symmetry.apply_symmetry(xyz_mapped, seq_t)
+        ############################################################################
 
         fa_stack, xyz_true = self.diffuser.diffuse_pose(
             xyz_mapped,
