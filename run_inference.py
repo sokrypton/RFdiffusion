@@ -91,6 +91,18 @@ def main(conf: HydraConfig) -> None:
             seq_stack.append(seq_t)
             plddt_stack.append(plddt[0])  # remove singleton leading dimension
 
+            if conf.inference.dump_pdb:
+                protein = px0.cpu().numpy()[:,:4]
+                pdb_str = []
+                ctr = 0
+                for n,residue in enumerate(protein):
+                    for xyz,atom in zip(residue,[" N  ", " CA ", " C  ", " O  "]):
+                        pdb_str.append("%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f"
+                            % ("ATOM",ctr,atom,"GLY","A",n,*xyz,1,0))
+                        ctr += 1
+                print(":".join(pdb_str))
+
+
         # Flip order for better visualization in pymol
         denoised_xyz_stack = torch.stack(denoised_xyz_stack)
         denoised_xyz_stack = torch.flip(

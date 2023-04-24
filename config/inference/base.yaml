@@ -19,6 +19,7 @@ inference:
   final_step: 1
   deterministic: False
   trb_save_ckpt_path: null
+  dump_pdb: False
 
 contigmap:
   contigs: null
