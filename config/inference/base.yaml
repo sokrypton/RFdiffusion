@@ -20,6 +20,7 @@ inference:
   deterministic: False
   trb_save_ckpt_path: null
   dump_pdb: False
+  dump_pdb_path: "/tmp"
 
 contigmap:
   contigs: null

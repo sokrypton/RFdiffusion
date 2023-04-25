@@ -679,11 +679,14 @@ def writepdb_multi(
     if seq_stack.ndim != 2:
         T = atoms_stack.shape[0]
         seq_stack = torch.tile(seq_stack, (T, 1))
+    if bfacts.ndim != 2:
+        T = atoms_stack.shape[0]
+        bfacts = torch.tile(bfacts, (T, 1))        
     seq_stack = seq_stack.cpu()
-    for atoms, scpu in zip(atoms_stack, seq_stack):
+    for atoms, scpu, bfact in zip(atoms_stack, seq_stack, bfacts):
         ctr = 1
         atomscpu = atoms.cpu()
-        Bfacts = torch.clamp(bfacts.cpu(), 0, 1)
+        B = torch.clamp(bfact.cpu(), 0, 1)
         for i, s in enumerate(scpu):
             atms = aa2long[s]
             for j, atm_j in enumerate(atms):
@@ -709,7 +712,7 @@ def writepdb_multi(
                         atomscpu[i, j, 1],
                         atomscpu[i, j, 2],
                         1.0,
-                        Bfacts[i],
+                        B[i],
                     )
                 )
                 ctr += 1
