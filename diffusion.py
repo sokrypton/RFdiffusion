@@ -272,7 +272,7 @@ class IGSO3:
         return self.sigma_idx(self.sigma(continuous_t))
 
     def sigma(self, t: torch.tensor):
-        """
+        r"""
         Extract \sigma(t) corresponding to chosen sigma schedule.
 
         Args:
@@ -296,7 +296,7 @@ class IGSO3:
             raise ValueError(f"Unrecognize schedule {self.schedule}")
 
     def g(self, t):
-        """
+        r"""
         g returns the drift coefficient at time t
 
         since
